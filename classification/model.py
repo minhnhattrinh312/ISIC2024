@@ -10,6 +10,7 @@ from classification.loss_fucntion import FocalLoss
 import torch.optim as optim
 from classification.metric import accuracy, f1_score
 from classification.utils import *
+from classification.dataset import get_transform
 
 
 class Classifier(pl.LightningModule):
@@ -30,17 +31,18 @@ class Classifier(pl.LightningModule):
         self.factor_lr = factor_lr
         self.patience_lr = patience_lr
         ################ augmentation ############################
-        self.transform = AugmentationSequential(
-            RandomHorizontalFlip(p=0.5),
-            RandomVerticalFlip(p=0.5),
-            RandomAffine(degrees=10, translate=0.0625, scale=(0.95, 1.05), p=0.5),
-            data_keys=["input", "mask"],
-        )
+        self.train_transform, self.val_transform = get_transform()
         self.test_metric = []
         self.validation_step_outputs = []
 
     def forward(self, x):
         return self.model(x)
+
+    def on_after_batch_transfer(self, batch, dataloader_idx):
+        if self.trainer.training:
+            with torch.no_grad():
+                batch = self.transform(*batch)
+        return batch
 
     def _step(self, batch):
         image, y_true = batch
@@ -77,5 +79,16 @@ class Classifier(pl.LightningModule):
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="max", factor=self.factor_lr, patience=self.patience_lr, verbose=True
         )
-        lr_schedulers = {"scheduler": scheduler, "monitor": "test_f1"}
+        lr_schedulers = {
+            "scheduler": scheduler,
+            "monitor": "test_f1",
+            "strict": False,
+        }
+
         return [optimizer], lr_schedulers
+
+    def lr_scheduler_step(self, scheduler, metric):
+        if self.current_epoch < 100:
+            return
+        else:
+            super().lr_scheduler_step(scheduler, metric)
