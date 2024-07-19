@@ -74,18 +74,20 @@ for isic_id in tqdm(df_train_2024["isic_id"]):
     else:
         print(f"Image {isic_id} not found")
         break
+
 # merge all dataframes
 df_train = pd.concat([df_train_2019, df_train_2020, df_train_2024], axis=0)
+# keep only the columns: isic_id, target, image_path
+df_train = df_train[["isic_id", "target", "image_path"]]
 # change index of the dataframe from 0 to len(df)
 df_train.reset_index(drop=True, inplace=True)
-
 # create a new column for the dataset which is fold, that split the dataset into 5 folds
 # each fold has 20% of the dataset and the target == 1 will be balanced in each fold
 
 df_train["fold"] = -1
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 for fold, (train_index, test_index) in enumerate(skf.split(df_train, df_train["target"])):
-    df_train.loc[test_index, "fold"] = fold
+    df_train.loc[test_index, "fold"] = fold + 1
 
 # save the dataframe for 55000 images
 df_train.to_csv("./dataset/data_images.csv", index=False)

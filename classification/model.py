@@ -1,16 +1,13 @@
-from distutils.command.config import config
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from timm.models.layers import DropPath
 import numpy as np
+import torch
 import pytorch_lightning as pl
 import timm.optim
-from classification.loss_fucntion import FocalLoss
+from classification.loss_function import FocalLoss
 import torch.optim as optim
-from classification.metric import accuracy, f1_score
+from classification.metric import partial_auc, f1_score
 from classification.utils import *
 from classification.dataset import get_transform
+import kornia.augmentation as K
 
 
 class Classifier(pl.LightningModule):
@@ -31,48 +28,54 @@ class Classifier(pl.LightningModule):
         self.factor_lr = factor_lr
         self.patience_lr = patience_lr
         ################ augmentation ############################
-        self.train_transform, self.val_transform = get_transform()
-        self.test_metric = []
+        self.transform = get_transform()
+        self.normalize = K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         self.validation_step_outputs = []
 
     def forward(self, x):
-        return self.model(x)
+        return self.model(self.normalize(x))
 
     def on_after_batch_transfer(self, batch, dataloader_idx):
+        image, y_true = batch
         if self.trainer.training:
-            with torch.no_grad():
-                batch = self.transform(*batch)
-        return batch
+            image = self.transform(image)
+        return image, y_true
 
-    def _step(self, batch):
+    def training_step(self, batch, batch_idx):
         image, y_true = batch
         y_pred = self.model(image)
         loss_focal = FocalLoss(self.device, self.class_weight, self.num_classes)(y_true, y_pred)
-        acc, f1 = accuracy(y_true, y_pred), f1_score(y_true, y_pred)
-        return loss_focal, acc, f1
-
-    def training_step(self, batch, batch_idx):
-        loss, acc, f1 = self._step(batch)
-        metrics = {"loss": loss, "train_acc": acc, "train_f1": f1}
+        f1 = f1_score(y_true, y_pred[:, 1:2])
+        metrics = {"loss": loss_focal, "train_f1": f1}
         self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
-        return loss
+        return loss_focal
 
     def validation_step(self, batch, batch_idx):
-        loss, acc, f1 = self._step(batch)
-        metrics = {"test_loss": loss, "test_acc": acc, "test_f1": f1}
+        image, y_true = batch
+        y_pred = self.model(image)
+        loss_focal = FocalLoss(self.device, self.class_weight, self.num_classes)(y_true, y_pred)
+        metrics = {"batch_val_loss": loss_focal}
+        # y_pred get the probability of the positive class
+        output_dict = {
+            "batch_y_true": y_true.cpu(),
+            "batch_y_pred": y_pred.detach().cpu()[:, 1:2],
+        }
+        self.validation_step_outputs.append(output_dict)
         self.log_dict(metrics, prog_bar=True)
         return metrics
 
-    def test_step(self, batch, batch_idx):
-        loss, acc, f1 = self._step(batch)
-        metrics = {"test_loss": loss, "test_acc": acc, "test_f1": f1}
+    def on_validation_epoch_end(self):
+        # get batches y_true and y_pred from self.validation_step_outputs
+        # calculate the partial_auc by using the batches y_true and y_pred
+        # log the partial_auc
+        y_true = torch.cat([x["batch_y_true"] for x in self.validation_step_outputs], dim=0)
+        y_pred = torch.cat([x["batch_y_pred"] for x in self.validation_step_outputs], dim=0)
+        partial_auc_val = partial_auc(y_true, y_pred)
+        f1 = f1_score(y_true, y_pred)
+        metrics = {"val_partial_auc": partial_auc_val, "val_f1": f1}
         self.log_dict(metrics, prog_bar=True)
-        return metrics
 
-    def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        x, y = batch
-        y_hat = self.model(x)
-        return y_hat.cpu().numpy()
+        return metrics
 
     def configure_optimizers(self):
         optimizer = timm.optim.Nadam(self.parameters(), lr=self.learning_rate)
@@ -81,14 +84,14 @@ class Classifier(pl.LightningModule):
         )
         lr_schedulers = {
             "scheduler": scheduler,
-            "monitor": "test_f1",
+            "monitor": "val_partial_auc",
             "strict": False,
         }
 
         return [optimizer], lr_schedulers
 
-    def lr_scheduler_step(self, scheduler, metric):
-        if self.current_epoch < 100:
-            return
-        else:
-            super().lr_scheduler_step(scheduler, metric)
+    # def lr_scheduler_step(self, scheduler, metric):
+    #     if self.current_epoch < 30:
+    #         return
+    #     else:
+    #         super().lr_scheduler_step(scheduler, metric)
