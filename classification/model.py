@@ -1,16 +1,15 @@
 import numpy as np
 import torch
-import pytorch_lightning as pl
+import lightning
 import timm.optim
 from classification.loss_function import FocalLoss
-import torch.optim as optim
 from classification.metric import partial_auc, f1_score
 from classification.utils import *
 from classification.dataset import get_transform
 import kornia.augmentation as K
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-
-class Classifier(pl.LightningModule):
+class Classifier(lightning.LightningModule):
 
     def __init__(self, model, class_weight, num_classes, learning_rate, factor_lr, patience_lr):
         super().__init__()
@@ -79,16 +78,14 @@ class Classifier(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = timm.optim.Nadam(self.parameters(), lr=self.learning_rate)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="max", factor=self.factor_lr, patience=self.patience_lr, verbose=True
-        )
+        scheduler = ReduceLROnPlateau(optimizer, mode="max", factor=self.factor_lr, patience=self.patience_lr)
         lr_schedulers = {
             "scheduler": scheduler,
             "monitor": "val_partial_auc",
             "strict": False,
         }
 
-        return [optimizer], lr_schedulers
+        return [optimizer], [lr_schedulers]
 
     # def lr_scheduler_step(self, scheduler, metric):
     #     if self.current_epoch < 30:

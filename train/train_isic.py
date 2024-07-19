@@ -1,14 +1,14 @@
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import LearningRateMonitor, EarlyStopping
+from lightning.pytorch import Trainer
+from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 import torch
 from torch.utils.data import DataLoader
 import sys
 import pandas as pd
-from classification import convnext_small
 
-sys.path.insert(0, "/ISIC2024/")
+sys.path.insert(0, "../ISIC2024/")
 from classification import *
-from pytorch_lightning.loggers import WandbLogger
+from lightning.pytorch.loggers import WandbLogger
 import os
 import wandb
 
@@ -19,8 +19,9 @@ torch.set_float32_matmul_precision("high")
 # Main function
 if __name__ == "__main__":
     # Loop over the folds
-    for fold in range(cfg.TRAIN.FOLDS):
+    for fold in cfg.TRAIN.FOLDS:
         print("train on fold", fold)
+        print("class_weight:", cfg.DATA.CLASS_WEIGHT)
         save_dir = f"{cfg.DIRS.SAVE_DIR}/fold_{fold}/"
         os.makedirs(save_dir, exist_ok=True)
 
@@ -63,19 +64,8 @@ if __name__ == "__main__":
             cfg.OPT.PATIENCE_LR,
         )
 
-        # If wandb_logger is True, create a WandbLogger object
-        if cfg.TRAIN.WANDB:
-            wandb_logger = WandbLogger(
-                project="ISIC2024",
-                group=f"{cfg.TRAIN.MODEL}",
-                name=f"fold{cfg.TRAIN.FOLD}",
-                resume="allow",
-            )
-        else:
-            wandb_logger = False
-
         # Initialize a ModelCheckpoint callback to save the model weights after each epoch
-        check_point_auc = pl.callbacks.model_checkpoint.ModelCheckpoint(
+        check_point_auc = ModelCheckpoint(
             save_dir,
             filename="ckpt_score_{val_partial_auc:0.4f}",
             monitor="val_partial_auc",
@@ -88,7 +78,7 @@ if __name__ == "__main__":
         )
 
         # Initialize a LearningRateMonitor callback to log the learning rate during training
-        lr_monitor = LearningRateMonitor(logging_interval=None)
+        lr_monitor = LearningRateMonitor(logging_interval="step")
         # Initialize a EarlyStopping callback to stop training if the validation loss does not improve for a certain number of epochs
         early_stopping = EarlyStopping(
             monitor="val_partial_auc",
@@ -97,10 +87,18 @@ if __name__ == "__main__":
             verbose=True,
             strict=False,
         )
-
-        print("class_weight:", cfg.DATA.CLASS_WEIGHT)
-        print("Train on fold:", cfg.TRAIN.FOLD)
-        print("Use loss:", cfg.TRAIN.LOSS)
+        # If wandb_logger is True, create a WandbLogger object
+        if cfg.TRAIN.WANDB:
+            wandb_logger = WandbLogger(
+                project="ISIC2024",
+                name=f"{cfg.TRAIN.MODEL}_fold_{fold}",
+                group=f"{cfg.TRAIN.MODEL}",
+                resume="allow",
+            )
+            callbacks = [check_point_auc, early_stopping, lr_monitor]
+        else:
+            wandb_logger = False
+            callbacks = [check_point_auc, early_stopping]
 
         # Define a dictionary with the parameters for the Trainer object
         PARAMS_TRAINER = {
@@ -110,15 +108,15 @@ if __name__ == "__main__":
             "enable_progress_bar": True,
             # "overfit_batches" :5,
             "logger": wandb_logger,
-            "callbacks": [check_point_auc, early_stopping, lr_monitor],
+            "callbacks": callbacks,
             "log_every_n_steps": 1,
-            "num_sanity_val_steps": 2,
+            "num_sanity_val_steps": 0,
             "max_epochs": cfg.TRAIN.EPOCHS,
             "precision": cfg.SYS.MIX_PRECISION,
         }
 
         # Initialize a Trainer object with the specified parameters
-        trainer = pl.Trainer(**PARAMS_TRAINER)
+        trainer = Trainer(**PARAMS_TRAINER)
         # Get a list of file paths for all non-hidden files in the SAVE_DIR directory
         checkpoint_paths = [save_dir + f for f in os.listdir(save_dir) if not f.startswith(".")]
         checkpoint_paths.sort()
@@ -128,7 +126,7 @@ if __name__ == "__main__":
             checkpoint = checkpoint_paths[cfg.TRAIN.IDX_CHECKPOINT]
             print(f"load checkpoint: {checkpoint}")
             # Load the model weights from the selected checkpoint
-            segmenter = classifier.load_from_checkpoint(
+            classifier = classifier.load_from_checkpoint(
                 checkpoint_path=checkpoint,
                 model=model,
                 class_weight=cfg.DATA.CLASS_WEIGHT,
@@ -139,6 +137,6 @@ if __name__ == "__main__":
             )
 
         # Train the model using the train_dataset and test_dataset data loaders
-        trainer.fit(segmenter, train_dataset, test_dataset)
+        trainer.fit(classifier, train_dataset, test_dataset)
 
         wandb.finish()

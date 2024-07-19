@@ -4,7 +4,8 @@ __pycache__/
 *$py.class
 dataset/
 .history/
-
+wandb/
+weights*/
 # C extensions
 *.so
 
