@@ -41,13 +41,13 @@ def get_transform():
         K.RandomHorizontalFlip(p=0.5),
         K.RandomVerticalFlip(p=0.5),
         K.ColorJitter(brightness=0.2, contrast=0.2, p=0.75),
-        K.container.AugmentationSequential(
-            K.RandomGaussianBlur((5, 5), (0.1, 2), p=0.5),
-            K.RandomGaussianNoise(mean=0.0, std=0.02, p=0.5),
-            random_apply=(1, 1),
-        ),
+        # K.container.AugmentationSequential(
+        #     K.RandomGaussianBlur((5, 5), (0.1, 2), p=0.5),
+        #     K.RandomGaussianNoise(mean=0.0, std=0.02, p=0.5),
+        #     random_apply=(1, 1),
+        # ),
         # K.RandomClahe(clip_limit=(2, 2), grid_size=(2, 2), p=0.7),
         K.RandomAffine(degrees=(-15, 15), translate=(0.1, 0.1), scale=(0.9, 0.9), p=0.85),
-        K.RandomErasing(scale=(0, 0.3), ratio=(1, 1), value=0.0, p=0.7),
+        K.RandomErasing(scale=(0, 0.2), ratio=(1, 1), value=0.0, p=0.7),
     )
     return transform
