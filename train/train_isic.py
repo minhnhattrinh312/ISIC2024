@@ -5,7 +5,6 @@ import torch
 from torch.utils.data import DataLoader
 import sys
 import pandas as pd
-
 sys.path.insert(0, "../ISIC2024/")
 from classification import *
 from lightning.pytorch.loggers import WandbLogger
@@ -24,22 +23,35 @@ if __name__ == "__main__":
         print("class_weight:", cfg.DATA.CLASS_WEIGHT)
         save_dir = f"{cfg.DIRS.SAVE_DIR}/fold_{fold}/"
         os.makedirs(save_dir, exist_ok=True)
-
-        df_data = pd.read_csv("./dataset/data_images.csv")
+        df_data = pd.read_csv(f"./dataset/data_images_fold{1}.csv")
         # get dataframe train and test
         df_train = df_data[df_data["fold"] != fold].reset_index(drop=True)
         df_test = df_data[df_data["fold"] == fold].reset_index(drop=True)
-        train_loader = ISIC_Loader(df_train)
+        # duplicate df_Train to df_train_aug that all columns have target==1 will be duplicated 10 times
+        # df_train_aug = df_train[df_train["target"] == 1].copy()
+        # df_train_aug = pd.concat([df_train_aug] * 8, ignore_index=True)
+        # df_train = pd.concat([df_train, df_train_aug], ignore_index=True)
+        # Initialize ISIC_Loader objects for the training and test data
+        train_loader = ISIC_Loader(df_train, mode="train")
+
         test_loader = ISIC_Loader(df_test)
         # Define data loaders for the training and test data
+        sampler = DualSampler(
+            train_loader,
+            batch_size=cfg.TRAIN.BATCH_SIZE,
+            num_pos=3,
+            sampling_rate=None,
+            shuffle=True
+        )
         train_dataset = DataLoader(
             train_loader,
             batch_size=cfg.TRAIN.BATCH_SIZE,
             pin_memory=True,
-            shuffle=True,
+            # shuffle=True,
             num_workers=cfg.TRAIN.NUM_WORKERS,
             drop_last=True,
             prefetch_factor=cfg.TRAIN.PREFETCH_FACTOR,
+            sampler=sampler,
         )
         test_dataset = DataLoader(
             test_loader,
@@ -47,7 +59,9 @@ if __name__ == "__main__":
             num_workers=cfg.TRAIN.NUM_WORKERS,
             prefetch_factor=cfg.TRAIN.PREFETCH_FACTOR,
         )
-
+        
+        if cfg.TRAIN.PRETRAIN:
+            print("use pretrain")
         model = convnext_small(
             pretrained=cfg.TRAIN.PRETRAIN,
             in_22k=cfg.TRAIN.CONVEXT.IN22K,
@@ -126,7 +140,7 @@ if __name__ == "__main__":
             checkpoint = checkpoint_paths[cfg.TRAIN.IDX_CHECKPOINT]
             print(f"load checkpoint: {checkpoint}")
             # Load the model weights from the selected checkpoint
-            classifier = classifier.load_from_checkpoint(
+            classifier = Classifier.load_from_checkpoint(
                 checkpoint_path=checkpoint,
                 model=model,
                 class_weight=cfg.DATA.CLASS_WEIGHT,
