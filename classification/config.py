@@ -11,7 +11,7 @@ cfg.PREDICT = CN()
 cfg.TRAIN.CONVEXT = CN()
 
 cfg.DATA.NUM_CLASS = 2
-cfg.DATA.CLASS_WEIGHT = [0.1, 0.9]  # default [0.1, 0.9]
+cfg.DATA.CLASS_WEIGHT = [0.2, 0.8]  # default [0.1, 0.9]
 cfg.DATA.IN_CHANNEL = 3
 cfg.DATA.IMG_SIZE = [224, 224]
 
@@ -29,7 +29,7 @@ cfg.TRAIN.PREFETCH_FACTOR = 2
 cfg.TRAIN.WANDB = True
 cfg.TRAIN.EPOCHS = 300
 cfg.TRAIN.IDX_CHECKPOINT = -1
-cfg.TRAIN.LOAD_CHECKPOINT = False
+cfg.TRAIN.LOAD_CHECKPOINT = True
 cfg.TRAIN.SAVE_TOP_K = 5
 
 cfg.DIRS.SAVE_DIR = f"./weights_{cfg.TRAIN.MODEL}/"

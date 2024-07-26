@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 import sys
 import pandas as pd
+
 sys.path.insert(0, "../ISIC2024/")
 from classification import *
 from lightning.pytorch.loggers import WandbLogger
@@ -23,7 +24,7 @@ if __name__ == "__main__":
         print("class_weight:", cfg.DATA.CLASS_WEIGHT)
         save_dir = f"{cfg.DIRS.SAVE_DIR}/fold_{fold}/"
         os.makedirs(save_dir, exist_ok=True)
-        df_data = pd.read_csv(f"./dataset/data_images_fold{1}.csv")
+        df_data = pd.read_csv(f"./dataset/data_images_fold{fold}.csv")
         # get dataframe train and test
         df_train = df_data[df_data["fold"] != fold].reset_index(drop=True)
         df_test = df_data[df_data["fold"] == fold].reset_index(drop=True)
@@ -37,11 +38,7 @@ if __name__ == "__main__":
         test_loader = ISIC_Loader(df_test)
         # Define data loaders for the training and test data
         sampler = DualSampler(
-            train_loader,
-            batch_size=cfg.TRAIN.BATCH_SIZE,
-            num_pos=3,
-            sampling_rate=None,
-            shuffle=True
+            train_loader, batch_size=cfg.TRAIN.BATCH_SIZE, num_pos=3, sampling_rate=None, shuffle=True
         )
         train_dataset = DataLoader(
             train_loader,
@@ -59,7 +56,7 @@ if __name__ == "__main__":
             num_workers=cfg.TRAIN.NUM_WORKERS,
             prefetch_factor=cfg.TRAIN.PREFETCH_FACTOR,
         )
-        
+
         if cfg.TRAIN.PRETRAIN:
             print("use pretrain")
         model = convnext_small(

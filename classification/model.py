@@ -40,17 +40,17 @@ class Classifier(lightning.LightningModule):
         image, y_true = batch
         if self.trainer.training:
             with torch.no_grad():
-                image = self.transform(image)
+                image = self.normalize(self.transform(image))
         return image, y_true
 
     def training_step(self, batch, batch_idx):
         image, y_true = batch
-        y_pred = self.model(self.normalize(image))
+        y_pred = self.model(image)
         loss_focal = FocalLoss(self.device, self.class_weight, self.num_classes)(y_true, y_pred)
         # loss_focal = BCELoss(self.device, self.class_weight, self.num_classes)(y_true, y_pred)
         acc = accuracy(y_true, y_pred)
         f1 = f1_score(y_true, y_pred)
-        metrics = {"loss": loss_focal, "train_acc": acc, "train_f1": f1}
+        metrics = {"loss": loss_focal, "train_f1": f1}
         self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
         return loss_focal
 
