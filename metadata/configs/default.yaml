@@ -1,0 +1,22 @@
+metadata_folder: '/home/toannn/PythonCode/ISIC2024/dataset/data2024'
+random_split: true
+n_folds: 5
+valid_size: 0.2
+batch_size: 64
+model:
+  fcn:
+    hidden_layers: [128,256,128,16]
+    output_dim: 1
+
+optimizer: "SGD"
+learning_rate: 0.01
+scheduler: "ReduceLROnPlateau"
+
+num_epochs: 10
+device: "cpu"
+continue_training: False
+
+trained_weights: ""
+save_checkpoint: "/content/drive/MyDrive/Colab Notebooks/PhD Test/checkpoints/all_states.pt"
+save_model_checkpoint: "/content/drive/MyDrive/Colab Notebooks/PhD Test/checkpoints/model_weights.pt"
+save_matlab_checkpoint: "/content/drive/MyDrive/Colab Notebooks/PhD Test/checkpoints/matlab_weights.mat"
