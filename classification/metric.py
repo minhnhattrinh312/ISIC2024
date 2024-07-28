@@ -21,6 +21,14 @@ def f1_score(y_true, y_pred, smooth=1e-4):
     return 2 * (precision * recall) / (precision + recall)
 
 
+def recall(y_true, y_pred, smooth=1e-4):
+    # y_pred = torch.argmax(y_pred, axis=1, keepdim=True)
+    y_pred = y_pred[:, 1:2]
+    TP = torch.sum(y_true * y_pred)
+    FN = torch.sum(y_true * (1 - y_pred))
+    return (TP + smooth) / (TP + FN + smooth)
+
+
 def accuracy(y_true, y_pred):
     y_pred = torch.argmax(y_pred, axis=1, keepdim=True)
     acc = y_pred == y_true

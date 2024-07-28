@@ -78,8 +78,19 @@ if __name__ == "__main__":
         # Initialize a ModelCheckpoint callback to save the model weights after each epoch
         check_point_auc = ModelCheckpoint(
             save_dir,
-            filename="ckpt_score_{val_partial_auc:0.4f}",
+            filename="ckpt_auc_{val_partial_auc:0.4f}",
             monitor="val_partial_auc",
+            mode="max",
+            save_top_k=cfg.TRAIN.SAVE_TOP_K,
+            verbose=True,
+            save_weights_only=True,
+            auto_insert_metric_name=False,
+            save_last=True,
+        )
+        check_point_recall = ModelCheckpoint(
+            save_dir,
+            filename="ckpt_recall_{recall_val:0.4f}",
+            monitor="recall_val",
             mode="max",
             save_top_k=cfg.TRAIN.SAVE_TOP_K,
             verbose=True,
@@ -106,10 +117,10 @@ if __name__ == "__main__":
                 group=f"{cfg.TRAIN.MODEL}",
                 resume="allow",
             )
-            callbacks = [check_point_auc, early_stopping, lr_monitor]
+            callbacks = [check_point_auc, check_point_recall, early_stopping, lr_monitor]
         else:
             wandb_logger = False
-            callbacks = [check_point_auc, early_stopping]
+            callbacks = [check_point_auc, check_point_recall, early_stopping]
 
         # Define a dictionary with the parameters for the Trainer object
         PARAMS_TRAINER = {

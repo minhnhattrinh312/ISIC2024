@@ -11,7 +11,7 @@ cfg.PREDICT = CN()
 cfg.TRAIN.CONVEXT = CN()
 
 cfg.DATA.NUM_CLASS = 2
-cfg.DATA.CLASS_WEIGHT = [0.2, 0.8]  # default [0.1, 0.9]
+cfg.DATA.CLASS_WEIGHT = [0.1, 1]  # default [0.1, 0.9]
 cfg.DATA.IN_CHANNEL = 3
 cfg.DATA.IMG_SIZE = [224, 224]
 
@@ -34,10 +34,10 @@ cfg.TRAIN.SAVE_TOP_K = 5
 
 cfg.DIRS.SAVE_DIR = f"./weights_{cfg.TRAIN.MODEL}/"
 
-cfg.OPT.LEARNING_RATE = 0.0002
+cfg.OPT.LEARNING_RATE = 6e-6
 cfg.OPT.FACTOR_LR = 0.5
-cfg.OPT.PATIENCE_LR = 20
-cfg.OPT.PATIENCE_ES = 85
+cfg.OPT.PATIENCE_LR = 10
+cfg.OPT.PATIENCE_ES = 50
 
 cfg.SYS.ACCELERATOR = "gpu"
 cfg.SYS.DEVICES = [0]

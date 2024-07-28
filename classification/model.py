@@ -3,7 +3,7 @@ import torch
 import lightning
 import timm.optim
 from classification.loss_function import *
-from classification.metric import partial_auc, f1_score, accuracy
+from classification.metric import partial_auc, recall, accuracy
 from classification.utils import *
 from classification.dataset import get_transform
 import kornia.augmentation as K
@@ -48,9 +48,8 @@ class Classifier(lightning.LightningModule):
         y_pred = self.model(image)
         loss_focal = FocalLoss(self.device, self.class_weight, self.num_classes)(y_true, y_pred)
         # loss_focal = BCELoss(self.device, self.class_weight, self.num_classes)(y_true, y_pred)
-        acc = accuracy(y_true, y_pred)
-        f1 = f1_score(y_true, y_pred)
-        metrics = {"loss": loss_focal, "train_f1": f1}
+        recall_train = recall(y_true, y_pred)
+        metrics = {"loss": loss_focal, "recall_train": recall_train}
         self.log_dict(metrics, on_step=True, on_epoch=True, prog_bar=True)
         return loss_focal
 
@@ -76,8 +75,8 @@ class Classifier(lightning.LightningModule):
         y_true_epoch = torch.cat([x["batch_y_true"] for x in self.validation_step_outputs], dim=0)
         y_pred_epoch = torch.cat([x["batch_y_pred"] for x in self.validation_step_outputs], dim=0)
         partial_auc_val = partial_auc(y_true_epoch, y_pred_epoch[:, 1:2])
-        f1 = f1_score(y_true_epoch, y_pred_epoch)
-        metrics = {"val_partial_auc": partial_auc_val, "val_f1": f1}
+        recall_val = recall(y_true_epoch, y_pred_epoch)
+        metrics = {"val_partial_auc": partial_auc_val, "recall_val": recall_val}
         self.log_dict(metrics, prog_bar=True)
 
         return metrics
