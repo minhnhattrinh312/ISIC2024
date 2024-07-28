@@ -68,9 +68,7 @@ class ConvNeXt(nn.Module):
         depths=[3, 3, 9, 3],
         dims=[96, 192, 384, 768],
         drop_path_rate=0.0,
-        layer_scale_init_value=1e-6,
-        head_init_scale=1.0,
-    ):
+        layer_scale_init_value=1e-6):
         super().__init__()
 
         self.downsample_layers = nn.ModuleList()  # stem and 3 intermediate downsampling conv layers
@@ -100,16 +98,8 @@ class ConvNeXt(nn.Module):
             cur += depths[i]
 
         self.norm = nn.LayerNorm(dims[-1], eps=1e-6)  # final norm layer
-        self.head1 = nn.Linear(dims[-1], num_classes)
-
-        self.apply(self._init_weights)
-        self.head1.weight.data.mul_(head_init_scale)
-        self.head1.bias.data.mul_(head_init_scale)
-
-    def _init_weights(self, m):
-        if isinstance(m, (nn.Conv2d, nn.Linear)):
-            trunc_normal_(m.weight, std=0.02)
-            nn.init.constant_(m.bias, 0)
+        # self.head1 = nn.Linear(dims[-1], num_classes)
+        self.head1 = nn.Sequential(nn.Linear(dims[-1], num_classes), nn.Softmax(dim=1))
 
     def forward_features(self, x):
         for i in range(4):
