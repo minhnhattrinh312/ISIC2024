@@ -42,3 +42,6 @@ cfg.OPT.PATIENCE_ES = 50
 cfg.SYS.ACCELERATOR = "gpu"
 cfg.SYS.DEVICES = [0]
 cfg.SYS.MIX_PRECISION = "16-mixed"  # "16-mixed"  # 32 or 16-mixed
+
+cfg.PREDICT.FOLD = 1
+cfg.PREDICT.ENSEMBLE = True
