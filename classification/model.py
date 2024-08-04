@@ -20,7 +20,7 @@ class Classifier(lightning.LightningModule):
         self.learning_rate = learning_rate
 
         # torch 2.3 => compile to make faster
-        self.model = torch.compile(self.model)
+        self.model = torch.compile(self.model, mode="reduce-overhead")
 
         self.class_weight = class_weight
         self.num_classes = num_classes
