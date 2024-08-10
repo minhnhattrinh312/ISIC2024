@@ -3,7 +3,7 @@ import torch
 from torchvision import transforms
 import kornia.augmentation as K
 from PIL import Image
-
+from classification.config import cfg
 
 # the dataframe will be csv file
 class ISIC_Loader(Dataset):
@@ -19,7 +19,7 @@ class ISIC_Loader(Dataset):
 
     def __getitem__(self, idx):
         # load the image and labels from the csv file
-        image = Image.open(self.image_paths[idx]).resize((224, 224))
+        image = Image.open(self.image_paths[idx]).resize(cfg.DATA.IMG_SIZE)
         label = torch.tensor([self.targets[idx]], dtype=torch.int64)
         image = transforms.ToTensor()(image)
         # image = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])(image)

@@ -62,7 +62,7 @@ class Classifier(lightning.LightningModule):
         # copy y_pred to detach it from the graph
         output_dict = {
             "batch_y_true": y_true,
-            "batch_y_pred": y_pred,
+            "batch_y_pred": y_pred.clone(),
         }
         self.validation_step_outputs.append(output_dict)
         # self.log_dict(metrics, prog_bar=True)

@@ -13,9 +13,9 @@ cfg.TRAIN.CONVEXT = CN()
 cfg.DATA.NUM_CLASS = 2
 cfg.DATA.CLASS_WEIGHT = [0.1, 1]  # default [0.1, 0.9]
 cfg.DATA.IN_CHANNEL = 3
-cfg.DATA.IMG_SIZE = [224, 224]
+cfg.DATA.IMG_SIZE = [128, 128]
 
-cfg.TRAIN.MODEL = "convnext_small"
+cfg.TRAIN.MODEL = "convnext_tiny"
 cfg.TRAIN.CONVEXT.IN22K = True
 cfg.TRAIN.CONVEXT.DROPOUT = 0.2
 

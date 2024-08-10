@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
         if cfg.TRAIN.PRETRAIN:
             print("use pretrain")
-        model = convnext_small(
+        model = convnext_tiny(
             pretrained=cfg.TRAIN.PRETRAIN,
             in_22k=cfg.TRAIN.CONVEXT.IN22K,
             in_chans=cfg.DATA.IN_CHANNEL,
